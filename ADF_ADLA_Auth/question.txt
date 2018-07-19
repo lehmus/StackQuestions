@@ -1,0 +1,73 @@
+Title: ACL verification fails for Data Factory Service Principal, although it has rwx permissions
+
+Tags:
+[azure-data-factory]
+[azure-data-factory-2]
+[azure-data-lake]
+[u-sql]
+
+I have a U-SQL script that executes successfully from VS Code with my personal credentials, but fails when triggered from a Data Factory pipeline. My personal account has Owner rights on the Azure subscription. ADF uses Service Principal authentication with Data Lake Analytics & Store.
+
+I am using Data Factory V2 and Data Lake Gen1. Default Integration Runtime and ADLA Firewall is disabled.
+
+The U-SQL script is very simple, it just reads data from a CSV file and tries to write it in another CSV file. This is the whole script:
+
+	@companies = 
+		EXTRACT
+			Id string,
+			Name string
+		FROM @InputFile
+		USING Extractors.Csv(skipFirstNRows: 1);
+
+	OUTPUT @companies
+		TO @OutputFile
+		USING Outputters.Csv(outputHeader: true);
+
+The parameters _InputFile_ and _OutputFile_ contain the ADL paths to the input and output data. These parameters are passed from Data Factory. The first stage of the script ("Extract") executes successfully, and the graph shows that the error occurs in the "PodAggregate" stage. Similar error occurs if I try to write the output to a managed table instead of a CSV file.
+
+The high level error message in Data Factory is:
+
+> Error Id: VertexFailedFast, Error Message: Vertex failed with a fail-fast error.
+
+Data Lake Analytics gives the more detailed error:
+
+> E_STORE_USER_ERROR: A user error has been reported when reading or writing data.
+
+> Component: STORE
+
+> Description: Operation 'Open::Wait' returned error code -2096559454 'Forbidden. ACL verification failed. Either the resource does not exist or the user is not authorized to perform the requested operation.' for stream 'adl://[myadl].azuredatalakestore.net/adla/tmp/8a1495dc-8d80-44b9-a724-f2a0a963b3c8/stack_test/Companies.csv---6F21F973-45B9-46C7-805F-192672C99393-9_0_1.dtf%23N'.
+
+> Details:
+
+> Stream name 'adl://[myadl].azuredatalakestore.net/adla/tmp/8a1495dc-8d80-44b9-a724-f2a0a963b3c8/stack_test/Companies.csv---6F21F973-45B9-46C7-805F-192672C99393-9_0_1.dtf%23N'
+
+> Thu Jul 19 02:35:42 2018: Store user error, Operation:[Open::Wait], Error[Either the resource does not exist or the current user is not authorized to perform the requested operation](0x83090aa2)
+>     7ffd8c4195b7	ScopeEngine!?ToStringInternal@KeySampleCollection@SSLibV3@ScopeEngine@@AEAA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@XZ + 11b7	
+>     7ffd8c39a96d	ScopeEngine!??0ExceptionWithStack@ScopeEngine@@QEAA@W4ErrorNumber@1@AEBV?$initializer_list@VScopeErrorArg@ScopeCommon@@@std@@_N@Z + 13d	
+>     7ffd8c3abe3e	ScopeEngine!??0DeviceException@ScopeEngine@@QEAA@AEAVBlockDevice@1@AEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@J@Z + 1de	
+>     7ffd8c3f8c7b	ScopeEngine!?GetTotalIoWaitTime@Statistics@Scanner@ScopeEngine@@QEAA_JXZ + 133b	
+>     7ffd8c3f87dc	ScopeEngine!?GetTotalIoWaitTime@Statistics@Scanner@ScopeEngine@@QEAA_JXZ + e9c	
+>     7ffd9157780d	__ScopeCodeGenEngine__!ScopeEngine::CosmosOutput::IssueWritePage + 4d	d:\data\yarnnm\local\usercache\f675bad0-3d48-4f08-9933-d7cb614ec7a8\appcache\application_1531519980045_88416\container_e194_1531519980045_88416_01_000001\wd\scopeio.h line:6063
+>     7ffd9156be7d	__ScopeCodeGenEngine__!ScopeEngine::TextOutputStream<ScopeEngine::TextOutputStreamTraitsConst<44,0,0,0,1,0,1,4,1,0>,ScopeEngine::CosmosOutput>::Write<ScopeEngine::FString,1> + 2bd	d:\data\yarnnm\local\usercache\f675bad0-3d48-4f08-9933-d7cb614ec7a8\appcache\application_1531519980045_88416\container_e194_1531519980045_88416_01_000001\wd\scopeio.h line:7828
+>     7ffd91579290	__ScopeCodeGenEngine__!ScopeEngine::TextOutputPolicy<SV1_Extract_out0,5>::SerializeHeader + 30	d:\data\yarnnm\local\usercache\f675bad0-3d48-4f08-9933-d7cb614ec7a8\appcache\application_1531519980045_88416\container_e194_1531519980045_88416_01_000001\wd\__scopecodegenengine__.dll.cpp line:514
+>     7ffd91574ba7	__ScopeCodeGenEngine__!ScopeEngine::Outputer<ScopeEngine::ParallelUnionAll<ScopeEngine::Merger<ScopeEngine::Extractor<SV1_Extract_out0,ScopeEngine::BinaryExtractPolicy<SV1_Extract_out0>,ScopeEngine::BinaryInputStream,ScopeEngine::ExecutionStats>,SV1_Extract_out0,ScopeEngine::ScopeUnionAll<ScopeEngine::Extractor<SV1_Extract_out0,ScopeEngine::BinaryExtractPolicy<SV1_Extract_out0>,ScopeEngine::BinaryInputStream,ScopeEngine::ExecutionStats>,SV1_Extract_out0>,3>,SV1_Extract_out0,1>,SV1_Extract_out0,ScopeEngine::TextOutputPolicy<SV1_Extract_out0,5>,ScopeEngine::TextOutputStream<ScopeEngine::TextOutputStreamTraitsConst<44,0,0,0,1,0,1,4,1,0>,ScopeEngine::CosmosOutput>,0,ScopeEngine::ExecutionStats,ScopeEngine::DummyStatsWriter>::DoOutput + 27	d:\data\yarnnm\local\usercache\f675bad0-3d48-4f08-9933-d7cb614ec7a8\appcache\application_1531519980045_88416\container_e194_1531519980045_88416_01_000001\wd\scopeoperators.h line:5713
+>     7ffd91582258	__ScopeCodeGenEngine__!SV2_PodAggregate_execute + 658	d:\data\yarnnm\local\usercache\f675bad0-3d48-4f08-9933-d7cb614ec7a8\appcache\application_1531519980045_88416\container_e194_1531519980045_88416_01_000001\wd\__scopecodegenengine__.dll.cpp line:722
+>     7ffd8c36571d	ScopeEngine!??1OutputFileInfo@ScopeEngine@@QEAA@XZ + 60d	
+>     7ffd8c397aa0	ScopeEngine!?RunUserCode@Vertex@ScopeEngine@@SA_N_NAEBV?$function@$$A6AXXZ@std@@@Z + 1b0	
+>     7ffd8c397a4e	ScopeEngine!?RunUserCode@Vertex@ScopeEngine@@SA_N_NAEBV?$function@$$A6AXXZ@std@@@Z + 15e	
+>     7ffd8c397915	ScopeEngine!?RunUserCode@Vertex@ScopeEngine@@SA_N_NAEBV?$function@$$A6AXXZ@std@@@Z + 25	
+>     7ffd8c365c7f	ScopeEngine!??1OutputFileInfo@ScopeEngine@@QEAA@XZ + b6f	
+>     7ffd8c3950c4	ScopeEngine!?Execute@Vertex@ScopeEngine@@SA_NAEBVVertexStartupInfo@2@PEAUVertexExecutionInfo@2@@Z + 3f4	
+>     7ff731d8ae8d	scopehost!(no name)	
+>     7ff731d8adbd	scopehost!(no name)	
+>     7ffd8c4274d9	ScopeEngine!?Execute@VertexHostBase@ScopeEngine@@IEAA_NAEAVVertexStartupInfo@2@@Z + 379	
+>     7ff731d8d236	scopehost!(no name)	
+>     7ff731d6a966	scopehost!(no name)	
+>     7ff731d98dac	scopehost!(no name)	
+>     7ffd9e4713d2	KERNEL32!BaseThreadInitThunk + 22	
+>     7ffd9e5e54e4	ntdll!RtlUserThreadStart + 34	
+
+
+The Service Principal account has **Owner** permissions on Data Lake Analytics. The SP account also has (default) **rwx** permissions on the /stack_test subdirectory in Data Lake Store and all its files and children, and **x** permission on the root directory. The error message seems to say that the SP account is missing permissions on the destination file (/stack_test/Companies.csv), but I can explicitly see that it has **rwx** on that file. Which permissions am I still missing?
+
+For reference, the script and the Data Factory resources necessary to reproduce this problem can be found at: <https://github.com/lehmus/StackQuestions/tree/master/ADF_ADLA_Auth>.
