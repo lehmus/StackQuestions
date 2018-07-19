@@ -1,0 +1,13 @@
+// DECLARE @InputFile string = "/stack_test/data/companies.1.csv";
+// DECLARE @OutputFile string = "/stack_test/Companies.csv";
+
+@companies = 
+    EXTRACT
+        Id string,
+        Name string
+    FROM @InputFile
+    USING Extractors.Csv(skipFirstNRows: 1);
+
+OUTPUT @companies
+    TO @OutputFile
+    USING Outputters.Csv(outputHeader: true);

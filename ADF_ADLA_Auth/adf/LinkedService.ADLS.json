@@ -1,0 +1,22 @@
+{
+    "name": "DataLakeStore",
+    "properties": {
+        "type": "AzureDataLakeStore",
+        "typeProperties": {
+            "dataLakeStoreUri": "https://[myadl].azuredatalakestore.net/webhdfs/v1",
+            "servicePrincipalId": "[myprincipalid]",
+            "servicePrincipalKey": {
+                "type": "AzureKeyVaultSecret",
+                "store": {
+                    "referenceName": "KeyVault",
+                    "type": "LinkedServiceReference"
+                },
+                "secretName": "[myprincipal]"
+            },
+            "tenant": "[mytenant]",
+            "subscriptionId": "[myid]",
+            "resourceGroupName": "[myrg]"
+        }
+    },
+    "type": "Microsoft.DataFactory/factories/linkedservices"
+}

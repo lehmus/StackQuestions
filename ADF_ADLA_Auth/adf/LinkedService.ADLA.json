@@ -1,0 +1,22 @@
+{
+    "name": "DataLakeAnalytics",
+    "properties": {
+        "type": "AzureDataLakeAnalytics",
+        "typeProperties": {
+            "accountName": "[myadl]",
+            "servicePrincipalId": "[myprincipalid]",
+            "servicePrincipalKey": {
+                "type": "AzureKeyVaultSecret",
+                "store": {
+                    "referenceName": "KeyVault",
+                    "type": "LinkedServiceReference"
+                },
+                "secretName": "[myprincipal]"
+            },
+            "tenant": "[mytenant]",
+            "subscriptionId": "[myid]",
+            "resourceGroupName": "[myrg]"
+        }
+    },
+    "type": "Microsoft.DataFactory/factories/linkedservices"
+}

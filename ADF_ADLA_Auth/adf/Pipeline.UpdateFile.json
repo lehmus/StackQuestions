@@ -1,0 +1,59 @@
+{
+    "name": "StackTest",
+    "properties": {
+        "activities": [
+            {
+                "name": "Update file",
+                "type": "DataLakeAnalyticsU-SQL",
+                "policy": {
+                    "timeout": "7.00:00:00",
+                    "retry": 0,
+                    "retryIntervalInSeconds": 30,
+                    "secureOutput": false
+                },
+                "typeProperties": {
+                    "scriptPath": {
+                        "value": "@pipeline().parameters.ADLAScriptPath",
+                        "type": "Expression"
+                    },
+                    "scriptLinkedService": {
+                        "referenceName": "DataLakeStore",
+                        "type": "LinkedServiceReference"
+                    },
+                    "parameters": {
+                        "InputFile": {
+                            "value": "@pipeline().parameters.InputFile",
+                            "type": "Expression"
+                        },
+                        "OutputFile": {
+                            "value": "@pipeline().parameters.OutputFile",
+                            "type": "Expression"
+                        }
+                    }
+                },
+                "linkedServiceName": {
+                    "referenceName": "DataLakeAnalytics",
+                    "type": "LinkedServiceReference"
+                }
+            }
+        ],
+        "parameters": {
+            "ADLAScriptPath": {
+                "type": "String",
+                "defaultValue": "/stack_test/scripts/Script.UpdateFile.usql"
+            },
+            "InputFile": {
+                "type": "String",
+                "defaultValue": "/stack_test/data/companies.2.csv"
+            },
+            "OutputFile": {
+                "type": "String",
+                "defaultValue": "/stack_test/Companies.csv"
+            }
+        },
+        "folder": {
+            "name": "StackTest"
+        }
+    },
+    "type": "Microsoft.DataFactory/factories/pipelines"
+}
